@@ -156,7 +156,8 @@ npm run build
 The compiled, completely air-gapped static assets will be output to the `out/` directory ready for deployment on any static host or offline use.
 
 ---
-
+### Observability
+athlete-diagnostic-report.vercel.app
 ## 📄 License
 
 MIT License. Free to use, adapt, and build upon.

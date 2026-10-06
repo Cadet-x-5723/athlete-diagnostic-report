@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deep Personalized Fitness Assessment</title>
+  <style>
+    :root {
+      --bg: #0b1120;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --primary: #38bdf8;
+      --primary-hover: #0284c7;
+      --selected-bg: rgba(56, 189, 248, 0.16);
+      --selected-border: #38bdf8;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #22c55e;
+      --danger: #f87171;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); display: flex; justify-content: center; padding: 24px 16px; min-height: 100vh; }
+    .container { max-width: 760px; width: 100%; }
+    .header { text-align: center; margin-bottom: 24px; }
+    .header h1 { font-size: 1.6rem; color: var(--primary); margin-bottom: 6px; }
+    .header p { color: var(--text-muted); font-size: 0.95rem; }
+    
+    .progress-bar-container { background: var(--card-border); height: 8px; border-radius: 999px; margin-bottom: 24px; overflow: hidden; }
+    .progress-bar { background: var(--primary); height: 100%; width: 9%; transition: width 0.3s ease; }
+    
+    .stage-card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 28px; display: none; margin-bottom: 24px; }
+    .stage-card.active { display: block; animation: fadeIn 0.2s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .stage-title { font-size: 1.25rem; font-weight: 700; color: var(--primary); margin-bottom: 6px; }
+    .stage-subtitle { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px; border-bottom: 1px solid var(--card-border); padding-bottom: 12px; }
+    
+    .question-block { margin-bottom: 22px; }
+    .question-title { font-size: 0.95rem; font-weight: 600; margin-bottom: 8px; color: #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
+    .badge-multi { font-size: 0.72rem; color: var(--accent); border: 1px solid rgba(34, 197, 94, 0.4); padding: 2px 6px; border-radius: 4px; font-weight: 400; }
+    .badge-single { font-size: 0.72rem; color: var(--primary); border: 1px solid rgba(56, 189, 248, 0.4); padding: 2px 6px; border-radius: 4px; font-weight: 400; }
+    
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .options-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px; margin-top: 6px; }
+    
+    .option-btn { background: #0f172a; border: 1px solid var(--card-border); border-radius: 8px; padding: 10px 14px; font-size: 0.88rem; color: var(--text-muted); cursor: pointer; transition: all 0.15s ease; user-select: none; }
+    .option-btn:hover { border-color: var(--primary); color: #fff; }
+    .option-btn.selected { background: var(--selected-bg); border-color: var(--selected-border); color: var(--primary); font-weight: 600; }
+    
+    input[type="text"], input[type="number"], select, textarea { width: 100%; background: #0f172a; border: 1px solid var(--card-border); border-radius: 8px; padding: 10px 12px; color: #fff; font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
+    input:focus, select:focus, textarea:focus { border-color: var(--primary); }
+    
+    .nav-buttons { display: flex; justify-content: space-between; gap: 12px; margin-top: 24px; }
+    button.nav-btn { flex: 1; padding: 12px; border-radius: 8px; border: none; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    .btn-prev { background: #334155; color: #fff; }
+    .btn-prev:hover { background: #475569; }
+    .btn-next { background: var(--primary); color: #0b1120; }
+    .btn-next:hover { background: var(--primary-hover); }
+    
+    .summary-box { width: 100%; height: 320px; background: #0b1120; border: 1px solid var(--card-border); border-radius: 8px; color: #cbd5e1; font-family: monospace; font-size: 0.82rem; padding: 14px; resize: none; margin-top: 14px; line-height: 1.4; }
+    .copy-btn { background: var(--accent); color: #0b1120; width: 100%; padding: 14px; border-radius: 8px; border: none; font-weight: 700; cursor: pointer; font-size: 1rem; margin-top: 14px; }
+    .copy-btn:hover { opacity: 0.9; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>Personalized Athletic Fitness System</h1>
+    <p id="stage-indicator">Stage 1 of 11: Body & Baseline Fitness</p>
+  </div>
+
+  <div class="progress-bar-container">
+    <div class="progress-bar" id="progress"></div>
+  </div>
+
+  <form id="assessment-form">
+
+    <!-- ================= STAGE 1 ================= -->
+    <div class="stage-card active" data-stage="1">
+      <div class="stage-title">🧬 STAGE 1 — Body & Baseline Fitness</div>
+      <div class="stage-subtitle">Accurate biometrics and immediate max execution capacity.</div>
+
+      <div class="question-block">
+        <div class="question-title">1. Age, Biological Sex, Height, Current Bodyweight</div>
+        <div class="grid-2" style="margin-bottom: 8px;">
+          <input type="number" id="s1_age" placeholder="Age (e.g. 21)">
+          <select id="s1_sex"><option value="">Sex</option><option value="Male">Male</option><option value="Female">Female</option></select>
+        </div>
+        <div class="grid-2">
+          <input type="text" id="s1_height" placeholder="Height (cm or ft/in)">
+          <input type="text" id="s1_weight" placeholder="Weight (kg or lbs)">
+        </div>
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">2. Waist Circumference (at narrowest point or navel)</div>
+        <input type="text" id="s1_waist" placeholder="e.g. 31 inches / 79 cm / Unknown">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">3. Strict Push-ups in a Single Unbroken Set</div>
+        <input type="number" id="s1_pushups" placeholder="Total reps (chest 1 inch from floor, locked elbows)">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">4. Strict Pull-ups in a Single Unbroken Set</div>
+        <input type="number" id="s1_pullups" placeholder="Total reps (dead-hang to chin over bar)">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">5. Parallel Bar / Sturdy Bench Dips</div>
+        <input type="text" id="s1_dips" placeholder="Total reps (or write 'No dip bars')">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">6. Strict Bodyweight Squats in a Single Unbroken Set</div>
+        <input type="number" id="s1_squats" placeholder="Total reps (hip crease strictly below knees)">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">7. Typical or Best 3.5 km Running Time</div>
+        <input type="text" id="s1_run_time" placeholder="e.g. 18 min 45 sec / approximate">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">8. Maximum Plank Duration (Flat back, strict hollow) <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s1_plank">
+          <div class="option-btn" data-val="Under 30s">Under 30 seconds</div>
+          <div class="option-btn" data-val="30-60s">30 to 60 seconds</div>
+          <div class="option-btn" data-val="60-120s">1 to 2 minutes</div>
+          <div class="option-btn" data-val="2+ minutes">2+ minutes</div>
+        </div>
+        <input type="hidden" id="s1_plank">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">9. How would you categorize your current physique? <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s1_physique">
+          <div class="option-btn" data-val="Lean/Slim">Lean / Slim (hard to gain mass)</div>
+          <div class="option-btn" data-val="Skinny-Fat">Skinny-fat (slim frame, soft lower belly)</div>
+          <div class="option-btn" data-val="Athletic">Athletic / Moderate muscle, moderate fat</div>
+          <div class="option-btn" data-val="Overweight">Carrying noticeable excess body fat</div>
+        </div>
+        <input type="hidden" id="s1_physique">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">10. Where do you currently experience recurring pain/tightness? <span class="badge-multi">Multi-Select</span></div>
+        <div class="options-grid" data-mode="multi" data-target="s1_pain">
+          <div class="option-btn" data-val="None">Completely Pain-free</div>
+          <div class="option-btn" data-val="Shin Splints">Shin Splints / Lower leg ache</div>
+          <div class="option-btn" data-val="Knees">Knee joints / Patellar tendon</div>
+          <div class="option-btn" data-val="Ankles/Feet">Ankles or Plantar Fascia</div>
+          <div class="option-btn" data-val="Shoulders">Front Shoulders or Rotator Cuff</div>
+          <div class="option-btn" data-val="Wrists/Elbows">Wrists or Elbows</div>
+          <div class="option-btn" data-val="Lower Back">Lower Back / Sacroiliac tightness</div>
+        </div>
+        <input type="hidden" id="s1_pain">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">11. Primary Physical Transformation Goal <span class="badge-multi">Multi-Select</span></div>
+        <div class="options-grid" data-mode="multi" data-target="s1_goal">
+          <div class="option-btn" data-val="Upper Body Muscle">Maximize Upper Body Mass & V-Taper</div>
+          <div class="option-btn" data-val="Calisthenics Mastery">Calisthenics Strength (Pull-ups, Dips, Levers)</div>
+          <div class="option-btn" data-val="Hybrid Athlete">Hybrid: Muscle Size + Sub-16 min 3.5k Run</div>
+          <div class="option-btn" data-val="Body Recomp">Recomposition (Trim waist, add density)</div>
+        </div>
+        <input type="hidden" id="s1_goal">
+      </div>
+    </div>
+
+    <!-- ================= STAGE 2 ================= -->
+    <div class="stage-card" data-stage="2">
+      <div class="stage-title">🏋️ STAGE 2 — Current Training Structure</div>
+      <div class="stage-subtitle">Analyzing how you train day in, day out right now.</div>
+
+      <div class="question-block">
+        <div class="question-title">1. Workout Frequency for Bodyweight Work <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s2_freq">
+          <div class="option-btn" data-val="7 days/week">7 days/week (Never skip)</div>
+          <div class="option-btn" data-val="5-6 days/week">5–6 days/week</div>
+          <div class="option-btn" data-val="3-4 days/week">3–4 days/week</div>
+        </div>
+        <input type="hidden" id="s2_freq">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">2. Average Duration of Your Daily Resistance Session</div>
+        <input type="text" id="s2_duration" placeholder="e.g. 30 minutes exact / 45 minutes">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">3. Structure of Your Daily Routine <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s2_structure">
+          <div class="option-btn" data-val="Full Body Circuit">Full Body Circuit (little rest between sets)</div>
+          <div class="option-btn" data-val="Straight Sets">Straight sets with dedicated rest (1-2 mins)</div>
+          <div class="option-btn" data-val="Random/Intuitive">Random reps throughout the session</div>
+        </div>
+        <input type="hidden" id="s2_structure">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">4. Typical Rest Intervals Between Sets <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s2_rest">
+          <div class="option-btn" data-val="Under 30s">Under 30 seconds (Keep moving)</div>
+          <div class="option-btn" data-val="45-60s">45 to 60 seconds</div>
+          <div class="option-btn" data-val="90-120s">90 seconds to 2 minutes</div>
+          <div class="option-btn" data-val="2-3 mins">2 to 3 minutes (Full strength recovery)</div>
+        </div>
+        <input type="hidden" id="s2_rest">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">5. Proximity to Failure on Sets <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s2_failure">
+          <div class="option-btn" data-val="0 RIR (Absolute Failure)">Total technical failure (cannot push up another mm)</div>
+          <div class="option-btn" data-val="1-2 RIR">1–2 reps in reserve (hard, but clean finish)</div>
+          <div class="option-btn" data-val="3+ RIR">3+ reps left (pure cardio / endurance burn)</div>
+        </div>
+        <input type="hidden" id="s2_failure">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">6. Which Push-up Variations Do You Currently Do? <span class="badge-multi">Multi-Select</span></div>
+        <div class="options-grid" data-mode="multi" data-target="s2_pushup_vars">
+          <div class="option-btn" data-val="Standard Flat">Standard Flat Push-ups</div>
+          <div class="option-btn" data-val="Wide Grip">Wide Grip Push-ups</div>
+          <div class="option-btn" data-val="Diamond/Close">Diamond / Close Grip</div>
+          <div class="option-btn" data-val="Decline (feet elevated)">Decline (Feet on bed/chair)</div>
+          <div class="option-btn" data-val="Pike/Handstand">Pike Push-ups (Vertical focus)</div>
+          <div class="option-btn" data-val="Archer/Explosive">Archer / Clapping Push-ups</div>
+        </div>
+        <input type="hidden" id="s2_pushup_vars">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">7. Do You Currently Track Your Reps & Sets in a Logbook/App? <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s2_tracking">
+          <div class="option-btn" data-val="Yes, strictly tracked">Yes, every set and rep is recorded</div>
+          <div class="option-btn" data-val="In my head">I track them in my head</div>
+          <div class="option-btn" data-val="No tracking">No, I just do reps until tired</div>
+        </div>
+        <input type="hidden" id="s2_tracking">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">8. Have Your Reps Stalled Recently, or Are They Progressing? <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s2_progress">
+          <div class="option-btn" data-val="Plateaued/Stalled">Plateaued completely across all lifts</div>
+          <div class="option-btn" data-val="Slowly increasing">Slowly increasing push-ups/squats</div>
+          <div class="option-btn" data-val="Decreasing / Overfatigued">Feeling weaker / reps dropping</div>
+        </div>
+        <input type="hidden" id="s2_progress">
+      </div>
+    </div>
+
+    <!-- ================= STAGE 3 ================= -->
+    <div class="stage-card" data-stage="3">
+      <div class="stage-title">💪 STAGE 3 — Strength & Movement Capacities</div>
+      <div class="stage-subtitle">Evaluating true multi-planar strength balance.</div>
+
+      <div class="question-block">
+        <div class="question-title">1. Vertical Pulling Form (Pull-ups) <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s3_pullup_form">
+          <div class="option-btn" data-val="Chest-to-bar strict">Dead-hang to upper chest touching bar</div>
+          <div class="option-btn" data-val="Chin over bar with chin tucked">Chin just clears bar</div>
+          <div class="option-btn" data-val="Some kip/swing">Using lower-body kip or swing</div>
+          <div class="option-btn" data-val="Cannot do pull-ups yet">Cannot do an unassisted pull-up</div>
+        </div>
+        <input type="hidden" id="s3_pullup_form">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">2. Horizontal Pulling (Inverted Bodyweight Rows) <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s3_rows">
+          <div class="option-btn" data-val="Regularly do 12+ clean rows">Do 12+ strict rows regularly under a table/bar</div>
+          <div class="option-btn" data-val="Rarely do rows">Rarely perform horizontal pulling</div>
+          <div class="option-btn" data-val="Never / No setup">Never perform rows (lack horizontal bar/setup)</div>
+        </div>
+        <input type="hidden" id="s3_rows">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">3. Unilateral Leg Strength (Bulgarian Split Squats / Lunges) <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s3_unilateral">
+          <div class="option-btn" data-val="Pistol Squats master">Can do full single-leg Pistol Squats</div>
+          <div class="option-btn" data-val="Strong Bulgarians (15+ clean)">Can perform 15+ solid Bulgarian split squats/leg</div>
+          <div class="option-btn" data-val="Wobbly/Unstable">Struggle with balance and single-leg knee tracking</div>
+        </div>
+        <input type="hidden" id="s3_unilateral">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">4. Posterior Chain (Hamstrings / Glutes) <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s3_posterior">
+          <div class="option-btn" data-val="Single leg hip thrusts easy">Can easily perform 15+ single-leg hip thrusts/leg</div>
+          <div class="option-btn" data-val="Only standard squats">I only do standard two-leg squats</div>
+          <div class="option-btn" data-val="Hamstrings feel weak/tight">Hamstrings cramp easily or feel underdeveloped</div>
+        </div>
+        <input type="hidden" id="s3_posterior">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">5. Core Strength: Hanging Leg Raises / Hollow Body <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s3_core">
+          <div class="option-btn" data-val="Toes to bar clean">Strict toes-to-bar with zero swing</div>
+          <div class="option-btn" data-val="Hanging knee raises">Hanging knee raises only</div>
+          <div class="option-btn" data-val="Floor sit-ups only">Floor sit-ups / crunches only</div>
+        </div>
+        <input type="hidden" id="s3_core">
+      </div>
+    </div>
+
+    <!-- ================= STAGE 4 ================= -->
+    <div class="stage-card" data-stage="4">
+      <div class="stage-title">🦵 STAGE 4 — Movement Mechanics & Mobility</div>
+      <div class="stage-subtitle">Identifying technical leaks, range of motion, and asymmetries.</div>
+
+      <div class="question-block">
+        <div class="question-title">1. Eccentric (Lowering) Control <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s4_eccentric">
+          <div class="option-btn" data-val="Strict 2-3s controlled eccentric">Controlled 2–3s descent on every rep</div>
+          <div class="option-btn" data-val="Drop fast, push hard">Drop quickly and bounce out of the bottom</div>
+          <div class="option-btn" data-val="Varies with fatigue">Controlled initially, sloppy when tired</div>
+        </div>
+        <input type="hidden" id="s4_eccentric">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">2. Deep Squat Mobility (Third-world / Asian squat flat-heeled) <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s4_squat_mob">
+          <div class="option-btn" data-val="Effortless deep squat">Can sit in deep squat flat-footed easily for 2 mins</div>
+          <div class="option-btn" data-val="Heels come up">Heels lift off the floor when descending deep</div>
+          <div class="option-btn" data-val="Lower back rounds heavily">Lower back tucks hard / hips feel pinching</div>
+        </div>
+        <input type="hidden" id="s4_squat_mob">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">3. Scapular & Shoulder Range of Motion <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s4_shoulder_mob">
+          <div class="option-btn" data-val="Full overhead extension">Full overhead reach without arching lower back</div>
+          <div class="option-btn" data-val="Shoulder stiffness/clicking">Shoulder clicks or tightness when reaching overhead</div>
+          <div class="option-btn" data-val="Forward rolled shoulders">Desk-slouch / rounded shoulders noticeable</div>
+        </div>
+        <input type="hidden" id="s4_shoulder_mob">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">4. Visible Left vs Right Strength Asymmetry <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s4_asymmetry">
+          <div class="option-btn" data-val="Balanced">Felt completely symmetrical across arms & legs</div>
+          <div class="option-btn" data-val="Right side noticeably stronger">Right side pushes/pulls visibly more weight</div>
+          <div class="option-btn" data-val="Left side noticeably stronger">Left side pushes/pulls visibly more weight</div>
+        </div>
+        <input type="hidden" id="s4_asymmetry">
+      </div>
+    </div>
+
+    <!-- ================= STAGE 5 ================= -->
+    <div class="stage-card" data-stage="5">
+      <div class="stage-title">🏃 STAGE 5 — Running & Cardio Architecture</div>
+      <div class="stage-subtitle">Harmonizing aerobic base with myofibrillar protein synthesis.</div>
+
+      <div class="question-block">
+        <div class="question-title">1. Current 3.5 km Perceived Exertion (RPE) <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s5_rpe">
+          <div class="option-btn" data-val="🟢 Easy Zone 2 (Conversational)">🟢 Easy: Can hold a steady conversation without gasping</div>
+          <div class="option-btn" data-val="🟡 Moderate Tempo (Breathing through mouth)">🟡 Moderate: Heavy breathing, fast pace</div>
+          <div class="option-btn" data-val="🔴 Hard (Near race-pace every day)">🔴 Hard: Pushing near maximal, finish completely exhausted</div>
+        </div>
+        <input type="hidden" id="s5_rpe">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">2. Running Surface <span class="badge-multi">Multi-Select</span></div>
+        <div class="options-grid" data-mode="multi" data-target="s5_surface">
+          <div class="option-btn" data-val="Hard Asphalt/Concrete Road">Hard Asphalt / Road</div>
+          <div class="option-btn" data-val="Clay/Dirt Track">Mud / Dirt / Ground</div>
+          <div class="option-btn" data-val="Grass Field">Grass / Park Ground</div>
+          <div class="option-btn" data-val="Treadmill">Treadmill</div>
+        </div>
+        <input type="hidden" id="s5_surface">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">3. Post-Run Fatigue Impact on Calisthenics <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s5_interference">
+          <div class="option-btn" data-val="Legs feel heavy during workouts">Legs feel heavy / weak during squats/push-ups</div>
+          <div class="option-btn" data-val="No impact, plenty of energy">Zero impact, I have full energy for both</div>
+          <div class="option-btn" data-val="I run right before workouts">I run immediately before my bodyweight training</div>
+          <div class="option-btn" data-val="I run after workouts">I do bodyweight training first, then run</div>
+        </div>
+        <input type="hidden" id="s5_interference">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">4. Are you open to replacing 2 daily runs with structured sprint intervals or targeted recovery runs if it accelerates muscle hypertrophy? <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s5_openness">
+          <div class="option-btn" data-val="100% Yes, prioritize muscle">100% Yes—whatever optimizes muscle and strength</div>
+          <div class="option-btn" data-val="Keep 5-6 days of running">Prefer to keep running 5–6 days minimum</div>
+          <div class="option-btn" data-val="Must run every single day">Must run daily (it is my non-negotiable mental habit)</div>
+        </div>
+        <input type="hidden" id="s5_openness">
+      </div>
+    </div>
+
+    <!-- ================= STAGE 6 ================= -->
+    <div class="stage-card" data-stage="6">
+      <div class="stage-title">🍛 STAGE 6 — Nutrition & Protein Intake</div>
+      <div class="stage-subtitle">Aligning hostel/home nutrition to trigger a genuine anabolic state.</div>
+
+      <div class="question-block">
+        <div class="question-title">1. Dietary Classification <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s6_diet">
+          <div class="option-btn" data-val="Non-Vegetarian">Non-Vegetarian (Chicken, Fish, Eggs, Dairy)</div>
+          <div class="option-btn" data-val="Eggetarian">Eggetarian (Eggs + Dairy, no meat)</div>
+          <div class="option-btn" data-val="Lacto-Vegetarian">Strict Lacto-Vegetarian (Dairy, Paneer, Dal only)</div>
+          <div class="option-btn" data-val="Vegan">Vegan (Plant-based only)</div>
+        </div>
+        <input type="hidden" id="s6_diet">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">2. Protein Sources You Eat Regularly (At least 3-4x/week) <span class="badge-multi">Multi-Select</span></div>
+        <div class="options-grid" data-mode="multi" data-target="s6_proteins">
+          <div class="option-btn" data-val="Whole Eggs">Whole Eggs (boiled/omelette)</div>
+          <div class="option-btn" data-val="Chicken Breast/Curry">Chicken Breast / Curry</div>
+          <div class="option-btn" data-val="Paneer">Paneer (Cottage Cheese)</div>
+          <div class="option-btn" data-val="Milk / Curd">Milk / Curd / Dahi</div>
+          <div class="option-btn" data-val="Soya Chunks">Soya Chunks / Meal Maker</div>
+          <div class="option-btn" data-val="Dal / Lentils">Dal / Rajma / Chole / Sprouts</div>
+          <div class="option-btn" data-val="Whey Protein Powder">Whey Protein Powder</div>
+          <div class="option-btn" data-val="Peanuts / Peanut Butter">Peanuts / Peanut Butter</div>
+        </div>
+        <input type="hidden" id="s6_proteins">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">3. Meal Preparation & Food Sourcing <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s6_prep">
+          <div class="option-btn" data-val="College Hostel / Mess">Hostel Mess food (fixed menu, limited meat/paneer)</div>
+          <div class="option-btn" data-val="Cook in PG / Flat">Cook for myself in PG / Flat</div>
+          <div class="option-btn" data-val="Home cooked with family">Home cooked with family</div>
+          <div class="option-btn" data-val="Eat outside / Canteen often">Frequently eat at local eateries/canteens</div>
+        </div>
+        <input type="hidden" id="s6_prep">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">4. Daily Liquid Water Intake <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s6_water">
+          <div class="option-btn" data-val="Under 2 Litres">Under 2 Litres/day</div>
+          <div class="option-btn" data-val="2 to 3 Litres">2 to 3 Litres/day</div>
+          <div class="option-btn" data-val="3.5+ Litres">3.5+ Litres/day</div>
+        </div>
+        <input type="hidden" id="s6_water">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">5. Appetite & Caloric Surplus Tolerance <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s6_appetite">
+          <div class="option-btn" data-val="Small appetite (hard to eat enough)">Small appetite (feel full quickly, struggle to eat more)</div>
+          <div class="option-btn" data-val="Moderate/Healthy appetite">Moderate appetite (can easily eat more if directed)</div>
+          <div class="option-btn" data-val="Huge appetite (always hungry)">Huge appetite (prone to overeating/snacking)</div>
+        </div>
+        <input type="hidden" id="s6_appetite">
+      </div>
+    </div>
+
+    <!-- ================= STAGE 7 ================= -->
+    <div class="stage-card" data-stage="7">
+      <div class="stage-title">😴 STAGE 7 — Recovery & Sleep Architecture</div>
+      <div class="stage-subtitle">Evaluating nervous system recovery and tissue rebuilding.</div>
+
+      <div class="question-block">
+        <div class="question-title">1. Average Nightly Sleep Duration <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s7_sleep_hrs">
+          <div class="option-btn" data-val="Under 6 hours">Under 6 hours</div>
+          <div class="option-btn" data-val="6 to 7 hours">6 to 7 hours</div>
+          <div class="option-btn" data-val="7 to 8 hours">7 to 8 hours</div>
+          <div class="option-btn" data-val="8+ hours">8+ hours</div>
+        </div>
+        <input type="hidden" id="s7_sleep_hrs">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">2. Sleep Quality & Consistency <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s7_sleep_quality">
+          <div class="option-btn" data-val="Deep, undisturbed">Deep, wake up refreshed</div>
+          <div class="option-btn" data-val="Frequent awakenings / restless">Toss and turn / wake up groggy</div>
+          <div class="option-btn" data-val="Erratic sleep timings">Erratic bedtimes (sleep at 1 AM one day, 3 AM next)</div>
+        </div>
+        <input type="hidden" id="s7_sleep_quality">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">3. Muscle Soreness (DOMS) Sensation <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s7_doms">
+          <div class="option-btn" data-val="Constant persistent soreness">Constantly sore, legs/chest never feel 100% fresh</div>
+          <div class="option-btn" data-val="Mild normal soreness">Mild soreness that clears within 24-48 hours</div>
+          <div class="option-btn" data-val="Rarely ever sore">Rarely sore despite daily training</div>
+        </div>
+        <input type="hidden" id="s7_doms">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">4. Daily Stress Level (Academic / College / Exams) <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s7_stress">
+          <div class="option-btn" data-val="Low stress">Low stress / relaxed routine</div>
+          <div class="option-btn" data-val="Moderate manageable stress">Moderate academic stress</div>
+          <div class="option-btn" data-val="High chronic stress">High chronic pressure / late study nights</div>
+        </div>
+        <input type="hidden" id="s7_stress">
+      </div>
+    </div>
+
+    <!-- ================= STAGE 8 ================= -->
+    <div class="stage-card" data-stage="8">
+      <div class="stage-title">🏫 STAGE 8 — College Schedule & Lifestyle Logistics</div>
+      <div class="stage-subtitle">Building around class routines and daily energy peaks.</div>
+
+      <div class="question-block">
+        <div class="question-title">1. Total Daily Time You Can Commit to Fitness (Running + Strength) <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s8_time_budget">
+          <div class="option-btn" data-val="30-40 mins total">30–40 mins max per day</div>
+          <div class="option-btn" data-val="45-60 mins total">45–60 mins per day</div>
+          <div class="option-btn" data-val="60-75 mins total">60–75 mins per day</div>
+          <div class="option-btn" data-val="90 mins (or two 45m blocks)">Up to 90 mins (or split into morning/evening)</div>
+        </div>
+        <input type="hidden" id="s8_time_budget">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">2. Preferred Time of Day for Training <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s8_timing">
+          <div class="option-btn" data-val="Early Morning (6 AM - 8 AM)">Early Morning before lectures</div>
+          <div class="option-btn" data-val="Late Afternoon (4 PM - 6 PM)">Late Afternoon / Post-college</div>
+          <div class="option-btn" data-val="Night (7 PM - 9 PM)">Evening / Night</div>
+          <div class="option-btn" data-val="Split (Morning run, evening strength)">Split: Morning run, Evening strength</div>
+        </div>
+        <input type="hidden" id="s8_timing">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">3. Daily Campus Steps / Physical Activity (Excluding Run) <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s8_steps">
+          <div class="option-btn" data-val="Mostly sedentary (sit in lectures/dorm)">Mostly sitting / desk bound (under 4,000 steps)</div>
+          <div class="option-btn" data-val="Moderate campus walking (5k-8k steps)">Moderate campus walking (5,000–8,000 steps)</div>
+          <div class="option-btn" data-val="Very active on feet (10k+ steps)">High non-exercise activity (10,000+ steps)</div>
+        </div>
+        <input type="hidden" id="s8_steps">
+      </div>
+    </div>
+
+    <!-- ================= STAGE 9 ================= -->
+    <div class="stage-card" data-stage="9">
+      <div class="stage-title">🏠 STAGE 9 — Equipment & Training Environment</div>
+      <div class="stage-subtitle">Zero assumptions: strictly what you have access to right now.</div>
+
+      <div class="question-block">
+        <div class="question-title">1. Equipment You Have Direct Access To <span class="badge-multi">Multi-Select</span></div>
+        <div class="options-grid" data-mode="multi" data-target="s9_equipment">
+          <div class="option-btn" data-val="No equipment (Floor only)">Strictly Floor / Park ground</div>
+          <div class="option-btn" data-val="Pull-up Bar (Door/Park)">Pull-up Bar (Doorway, wall, or local park)</div>
+          <div class="option-btn" data-val="Parallel Dip Bars">Parallel Dip Bars (or two sturdy parallel surfaces)</div>
+          <div class="option-btn" data-val="Resistance Loop Bands">Resistance Loop Bands</div>
+          <div class="option-btn" data-val="Gymnastic Rings">Gymnastic Rings</div>
+          <div class="option-btn" data-val="Dumbbells (Fixed or Adjustable)">Dumbbells</div>
+          <div class="option-btn" data-val="Weight Vest / Heavy Backpack">Backpack you can fill with books for weight</div>
+          <div class="option-btn" data-val="Full Commercial Gym Access">Full Gym Membership</div>
+        </div>
+        <input type="hidden" id="s9_equipment">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">2. Primary Training Location <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s9_location">
+          <div class="option-btn" data-val="Hostel Room / Bedroom">Inside small hostel room / bedroom</div>
+          <div class="option-btn" data-val="Campus Ground / Outdoor Park">Outdoor campus sports ground / park</div>
+          <div class="option-btn" data-val="Hostel Terrace / Rooftop">Hostel terrace / corridor</div>
+          <div class="option-btn" data-val="College Gym">College Gym facility</div>
+        </div>
+        <input type="hidden" id="s9_location">
+      </div>
+    </div>
+
+    <!-- ================= STAGE 10 ================= -->
+    <div class="stage-card" data-stage="10">
+      <div class="stage-title">🎯 STAGE 10 — Physique & Movement Priorities</div>
+      <div class="stage-subtitle">Targeting specific musculature and movement mechanics.</div>
+
+      <div class="question-block">
+        <div class="question-title">1. Target Muscle Groups to Prioritize First <span class="badge-multi">Multi-Select</span></div>
+        <div class="options-grid" data-mode="multi" data-target="s10_focus_muscles">
+          <div class="option-btn" data-val="Upper Chest & Shoulders">Upper Chest & Broad Shoulders (Delts)</div>
+          <div class="option-btn" data-val="Lats & Upper Back (V-Taper)">Lats & Back Width (V-Taper)</div>
+          <div class="option-btn" data-val="Arms (Biceps & Triceps)">Arms (Biceps & Triceps thickness)</div>
+          <div class="option-btn" data-val="Core & Visible Abs">Six-pack Abs & Core tightness</div>
+          <div class="option-btn" data-val="Hamstrings & Glutes">Hamstrings & Glute drive (Sprint power)</div>
+          <div class="option-btn" data-val="Quadriceps & Calves">Quadriceps & Calf density</div>
+        </div>
+        <input type="hidden" id="s10_focus_muscles">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">2. Calisthenics Skills You Want to Unlock Long-Term <span class="badge-multi">Multi-Select</span></div>
+        <div class="options-grid" data-mode="multi" data-target="s10_skills">
+          <div class="option-btn" data-val="Clean Muscle-Up">Strict Muscle-Up on bar/rings</div>
+          <div class="option-btn" data-val="Handstand Push-ups">Freestanding / Wall Handstand Push-ups</div>
+          <div class="option-btn" data-val="Pistol Squats">Flawless 10+ Pistol Squats per leg</div>
+          <div class="option-btn" data-val="L-Sit / Front Lever">L-Sit / Front Lever holds</div>
+          <div class="option-btn" data-val="None - Just Physique">Not interested in skills, just maximum muscle/physique</div>
+        </div>
+        <input type="hidden" id="s10_skills">
+      </div>
+    </div>
+
+    <!-- ================= STAGE 11 ================= -->
+    <div class="stage-card" data-stage="11">
+      <div class="stage-title">🔥 STAGE 11 — Sustainability & Bottlenecks</div>
+      <div class="stage-subtitle">Realistic boundaries and final structured export.</div>
+
+      <div class="question-block">
+        <div class="question-title">1. Realistic Long-Term Training Frequency (That you won't drop after 2 weeks) <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s11_sustainable_freq">
+          <div class="option-btn" data-val="4 days/week">4 days/week (Very sustainable with rest days)</div>
+          <div class="option-btn" data-val="5 days/week">5 days/week (Optimal push/pull/legs/running split)</div>
+          <div class="option-btn" data-val="6 days/week">6 days/week (High commitment)</div>
+          <div class="option-btn" data-val="7 days/week">7 days/week (Must do something daily)</div>
+        </div>
+        <input type="hidden" id="s11_sustainable_freq">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">2. Are you willing to take 1–2 complete rest days per week if it demonstrably increases your pull-ups, push-ups, and muscle growth? <span class="badge-single">Single Select</span></div>
+        <div class="options-grid" data-mode="single" data-target="s11_rest_days">
+          <div class="option-btn" data-val="Yes, totally open to rest days">Yes, 100% open to structured rest days</div>
+          <div class="option-btn" data-val="Prefer active recovery only">I get restless; I prefer light active walks/stretching only</div>
+          <div class="option-btn" data-val="No rest days">No, I hate skipping days</div>
+        </div>
+        <input type="hidden" id="s11_rest_days">
+      </div>
+
+      <div class="question-block">
+        <div class="question-title">3. Anything else specific about your body, schedule, or diet?</div>
+        <textarea id="s11_notes" rows="3" placeholder="e.g. Exam periods coming up, hate doing burpees, left shoulder pops on dips, etc."></textarea>
+      </div>
+
+      <button type="button" class="copy-btn" id="generate-btn">📋 Generate & Copy Complete Assessment</button>
+      <textarea class="summary-box" id="final-summary" readonly placeholder="Clicking the button above will aggregate all 11 stages into a structured Markdown profile and copy it to your clipboard..."></textarea>
+    </div>
+
+    <!-- NAVIGATION -->
+    <div class="nav-buttons">
+      <button type="button" class="nav-btn btn-prev" id="prev-btn" style="display: none;">Back</button>
+      <button type="button" class="nav-btn btn-next" id="next-btn">Next Stage</button>
+    </div>
+
+  </form>
+</div>
+
+<script>
+  let currentStage = 1;
+  const totalStages = 11;
+
+  // Single and Multi Select Handling
+  document.querySelectorAll('.options-grid').forEach(grid => {
+    const mode = grid.getAttribute('data-mode');
+    const targetInput = document.getElementById(grid.getAttribute('data-target'));
+
+    grid.querySelectorAll('.option-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (mode === 'single') {
+          grid.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+          if (targetInput) targetInput.value = btn.getAttribute('data-val');
+        } else if (mode === 'multi') {
+          btn.classList.toggle('selected');
+          const selectedVals = Array.from(grid.querySelectorAll('.option-btn.selected')).map(b => b.getAttribute('data-val'));
+          if (targetInput) targetInput.value = selectedVals.join(', ');
+        }
+      });
+    });
+  });
+
+  const updateStageUI = () => {
+    document.querySelectorAll('.stage-card').forEach(c => c.classList.remove('active'));
+    document.querySelector(`.stage-card[data-stage="${currentStage}"]`).classList.add('active');
+
+    document.getElementById('progress').style.width = `${(currentStage / totalStages) * 100}%`;
+    document.getElementById('stage-indicator').innerText = `Stage ${currentStage} of ${totalStages}`;
+
+    document.getElementById('prev-btn').style.display = currentStage === 1 ? 'none' : 'block';
+    document.getElementById('next-btn').style.display = currentStage === totalStages ? 'none' : 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  document.getElementById('next-btn').addEventListener('click', () => {
+    if (currentStage < totalStages) {
+      currentStage++;
+      updateStageUI();
+    }
+  });
+
+  document.getElementById('prev-btn').addEventListener('click', () => {
+    if (currentStage > 1) {
+      currentStage--;
+      updateStageUI();
+    }
+  });
+
+  document.getElementById('generate-btn').addEventListener('click', () => {
+    const val = id => document.getElementById(id)?.value?.trim() || "Not specified";
+
+    const report = 
+`### COMPREHENSIVE FITNESS & BIOMETRIC PROFILE
+
+**STAGE 1: Body & Baselines**
+- Age: ${val('s1_age')} | Sex: ${val('s1_sex')} | Height: ${val('s1_height')} | Weight: ${val('s1_weight')}
+- Waist Circumference: ${val('s1_waist')}
+- Push-ups Max: ${val('s1_pushups')}
+- Pull-ups Max: ${val('s1_pullups')}
+- Dips Capacity: ${val('s1_dips')}
+- Squats Max: ${val('s1_squats')}
+- 3.5 km Run Pace/Time: ${val('s1_run_time')}
+- Plank Capacity: ${val('s1_plank')}
+- Current Physique: ${val('s1_physique')}
+- Recurring Pain / Injuries: ${val('s1_pain')}
+- Primary Goal: ${val('s1_goal')}
+
+**STAGE 2: Current Training Routine**
+- Frequency: ${val('s2_freq')} | Session Duration: ${val('s2_duration')}
+- Routine Structure: ${val('s2_structure')}
+- Rest Intervals: ${val('s2_rest')}
+- Intensity / Failure Proximity: ${val('s2_failure')}
+- Push-up Variations Used: ${val('s2_pushup_vars')}
+- Tracking Method: ${val('s2_tracking')}
+- Progression Status: ${val('s2_progress')}
+
+**STAGE 3: Strength & Movement Capacity**
+- Pull-up Technique: ${val('s3_pullup_form')}
+- Horizontal Rows Status: ${val('s3_rows')}
+- Single-leg / Unilateral: ${val('s3_unilateral')}
+- Hamstring / Posterior Chain: ${val('s3_posterior')}
+- Core Flexion / Hanging Work: ${val('s3_core')}
+
+**STAGE 4: Mobility & Mechanics**
+- Eccentric Control: ${val('s4_eccentric')}
+- Deep Squat Mobility: ${val('s4_squat_mob')}
+- Shoulder Overhead Mobility: ${val('s4_shoulder_mob')}
+- Strength Asymmetries: ${val('s4_asymmetry')}
+
+**STAGE 5: Running Integration**
+- 3.5 km Perceived Exertion (RPE): ${val('s5_rpe')}
+- Running Surfaces: ${val('s5_surface')}
+- Fatigue Interaction: ${val('s5_interference')}
+- Periodization Openness: ${val('s5_openness')}
+
+**STAGE 6: Nutrition & Dietary Setup**
+- Diet Type: ${val('s6_diet')}
+- Common Protein Sources: ${val('s6_proteins')}
+- Meal Sourcing: ${val('s6_prep')}
+- Daily Water: ${val('s6_water')}
+- Appetite: ${val('s6_appetite')}
+
+**STAGE 7: Recovery & Sleep**
+- Sleep Duration: ${val('s7_sleep_hrs')}
+- Sleep Quality/Consistency: ${val('s7_sleep_quality')}
+- Muscle Soreness State: ${val('s7_doms')}
+- Stress Level: ${val('s7_stress')}
+
+**STAGE 8: College Lifestyle & Logistics**
+- Daily Time Budget: ${val('s8_time_budget')}
+- Preferred Training Window: ${val('s8_timing')}
+- Campus Steps / Non-exercise Activity: ${val('s8_steps')}
+
+**STAGE 9: Equipment & Training Environment**
+- Available Equipment: ${val('s9_equipment')}
+- Training Environment: ${val('s9_location')}
+
+**STAGE 10: Target Priorities & Calisthenics Skills**
+- Muscle Groups to Prioritize: ${val('s10_focus_muscles')}
+- Calisthenics Skills Desired: ${val('s10_skills')}
+
+**STAGE 11: Sustainability & Extra Notes**
+- Realistic Long-term Frequency: ${val('s11_sustainable_freq')}
+- Rest Day Acceptance: ${val('s11_rest_days')}
+- Specific Notes / Constraints: ${val('s11_notes')}`;
+
+    const summaryBox = document.getElementById('final-summary');
+    summaryBox.value = report;
+
+    navigator.clipboard.writeText(report).then(() => {
+      alert("Profile generated and copied to clipboard! Paste it into our chat.");
+    }).catch(() => {
+      alert("Profile generated! Please copy the text from the box manually and paste it into the chat.");
+    });
+  });
+</script>
+</body>
+</html>

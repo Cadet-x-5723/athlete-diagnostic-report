@@ -1,74 +1,98 @@
-# Dependencies
-node_modules/
-/.pnp
-.pnp.js
+# =========================================================================
+# Athletic Diagnostic System - Hardened .gitignore
+# =========================================================================
 
-# Production / Build artifacts
-.next/
-out/
-build/
-dist/
-
-# Environment files & Secrets
-.env*
-!.env.example
-
-# Debug & Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# OS & Editor
-.DS_Store
-Thumbs.db
-*.local
-.vscode/*
-!.vscode/settings.json
-!.vscode/extensions.json
-.idea/
-
-# TypeScript cache
-*.tsbuildinfo
-
-# Dependencies
-node_modules/
-/.pnp
-.pnp.js
-
-# Environment variables & secrets (CRITICAL)
+# -------------------------------------------------------------------------
+# 1. Environment & Secret Credentials (CRITICAL SECURITY)
+# -------------------------------------------------------------------------
 .env
+.env*
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 *.env
 *.env.*
+!.env.example
+
+# Private keys, certificates, tokens
 *.pem
 *.key
 *.cert
+*.crt
+*.pfx
+*.p12
+*.pkcs12
+id_rsa*
+id_ed25519*
+*.secret
+*secret*
+*credentials*
+*.token
 
-# Next.js & Turbopack build outputs
+# -------------------------------------------------------------------------
+# 2. Package Dependencies
+# -------------------------------------------------------------------------
+node_modules/
+/.pnp
+.pnp.js
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+
+# -------------------------------------------------------------------------
+# 3. Next.js, Turbopack & Build Artifacts
+# -------------------------------------------------------------------------
 .next/
 out/
 build/
 dist/
 .turbo/
+*.tsbuildinfo
+next-env.d.ts.bak
 
-# Debug logs
+# -------------------------------------------------------------------------
+# 4. Logs & Debug Artifacts
+# -------------------------------------------------------------------------
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+lerna-debug.log*
 
-# OS / Editor clutter
+# -------------------------------------------------------------------------
+# 5. OS Clutter & System Metadata
+# -------------------------------------------------------------------------
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+desktop.ini
+*.local
+*.swp
+*.swo
+*~
+*.tmp
+
+# -------------------------------------------------------------------------
+# 6. IDEs & Editors
+# -------------------------------------------------------------------------
+.idea/
+*.sublime-project
+*.sublime-workspace
 .vscode/*
 !.vscode/settings.json
 !.vscode/extensions.json
-.idea/
+!.vscode/tasks.json
 
-# Local agent artifacts and downloaded skills
+# -------------------------------------------------------------------------
+# 7. AI & Agent Caches
+# -------------------------------------------------------------------------
 .gemini/
-.agents/skills/
+.agents/
+.claude/
+scratch/

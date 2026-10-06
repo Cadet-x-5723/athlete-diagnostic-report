@@ -1,0 +1,42 @@
+name: CI Build & Security Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Typecheck & Static Export
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Secret Leak Prevention Check
+        run: |
+          echo "Verifying no private .env or credential files are tracked..."
+          ! git ls-files | grep -E "(^\.env|\.env\.|\.pem$|\.key$|\.cert$)" || exit 1
+
+      - name: Run TypeScript Verification
+        run: npm run typecheck
+
+      - name: Build Static Export
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1

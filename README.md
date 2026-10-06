@@ -116,48 +116,10 @@ ADS is engineered from the ground up for zero data leakage:
 
 ---
 
-## 🚀 Getting Started
-
-### Prerequisites
-- [Node.js](https://nodejs.org/) (v18.17+ or v20+ recommended)
-- `npm` or `pnpm`
-
-### Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/your-username/athlete-diagnostic-system.git
-
-# Navigate to project directory
-cd athlete-diagnostic-system
-
-# Install dependencies
-npm install
-```
-
-### Development Server
-
-```bash
-npm run dev
-```
-Open [http://localhost:3000](http://localhost:3000) or [http://127.0.0.1:3000](http://127.0.0.1:3000) in your browser.
-
-### Type Check
-
-```bash
-npm run typecheck
-```
-
-### Static Production Build (Air-Gapped)
-
-```bash
-npm run build
-```
-The compiled, completely air-gapped static assets will be output to the `out/` directory ready for deployment on any static host or offline use.
-
 ---
 ### Observability
-athlete-diagnostic-report.vercel.app
+[athlete-diagnostic-report.vercel.app](https://athlete-diagnostic-report.vercel.app/)
+
 ## 📄 License
 
 MIT License. Free to use, adapt, and build upon.
